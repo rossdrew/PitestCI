@@ -88,6 +88,7 @@ class shield:
         shieldRequest = Request('https://img.shields.io/badge/Pitest-' + str(percentageKilled) + '%25-' + color + '.svg?style=flat', headers={'User-Agent': 'Mozilla/5.0'})
         shieldResource = urlopen(shieldRequest).read()
         web.header('content-type', 'image/svg+xml;charset=utf-8')
+        web.header('Cache-Control', 'no-cache')
         return shieldResource
 
 class report:
