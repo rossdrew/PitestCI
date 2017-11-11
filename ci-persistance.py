@@ -6,10 +6,6 @@ db = MySQLdb.connect(host="localhost",
                      passwd="password",
                      db="pitest_ci")
 
-
-## Required format
-## date, mutations, killed, survived, no coverage, timed out
-
 def create(databaseName):
 	try:
 		cur.execute("""CREATE TABLE `{}` (
@@ -42,19 +38,10 @@ def add(mutations, killed, survived, no_coverage, timed_out, xmlBuildOutput):
 		db.rollback() 
 	return
 
-#INSERT INTO pitest_ci.build_result (time, mutations, killed, survived, no_coverage, timed_out, output) VALUES (1,2,3,4,5,6,'This is a test');
-
-# you must create a Cursor object. It will let
-#  you execute all the queries you need
+# Cursor object to create queries
 cur = db.cursor()
 
 add(1, 2, 3, 4, 5, 6)
-
-# Use all the SQL you like
-cur.execute("SELECT * FROM build_result")
-
-# print all the first cell of all the rows
-#for row in cur.fetchall():
-#    print row[1]
+#cur.execute("SELECT * FROM build_result")
 
 db.close()
