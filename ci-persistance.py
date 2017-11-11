@@ -1,6 +1,20 @@
 import MySQLdb
 import datetime, time
 
+#Schema
+#CREATE TABLE `build_result` (
+#  `id` int(11) NOT NULL AUTO_INCREMENT,
+#  `time` datetime NOT NULL,
+#  `mutations` int(11) NOT NULL,
+#  `killed` int(11) NOT NULL,
+#  `survived` int(11) NOT NULL,
+#  `no_coverage` int(11) NOT NULL,
+#  `timed_out` int(11) NOT NULL,
+#  `output` mediumblob NOT NULL,
+#  PRIMARY KEY (`id`)
+#) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
+
+
 db = MySQLdb.connect(host="localhost",
                      user="ci",
                      passwd="password",
