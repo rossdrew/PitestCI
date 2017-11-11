@@ -1,20 +1,6 @@
 import MySQLdb
 import datetime, time
 
-#Schema
-#CREATE TABLE `build_result` (
-#  `id` int(11) NOT NULL AUTO_INCREMENT,
-#  `time` datetime NOT NULL,
-#  `mutations` int(11) NOT NULL,
-#  `killed` int(11) NOT NULL,
-#  `survived` int(11) NOT NULL,
-#  `no_coverage` int(11) NOT NULL,
-#  `timed_out` int(11) NOT NULL,
-#  `output` mediumblob NOT NULL,
-#  PRIMARY KEY (`id`)
-#) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
-
-
 db = MySQLdb.connect(host="localhost",
                      user="ci",
                      passwd="password",
@@ -23,6 +9,26 @@ db = MySQLdb.connect(host="localhost",
 
 ## Required format
 ## date, mutations, killed, survived, no coverage, timed out
+
+def create(databaseName):
+	try:
+		cur.execute("""CREATE TABLE `{}` (
+					     `id` int(11) NOT NULL AUTO_INCREMENT,
+					     `time` datetime NOT NULL,
+					     `mutations` int(11) NOT NULL,
+					     `killed` int(11) NOT NULL,
+					     `survived` int(11) NOT NULL,
+					     `no_coverage` int(11) NOT NULL,
+					     `timed_out` int(11) NOT NULL,
+					     `output` mediumblob NOT NULL,
+					     PRIMARY KEY (`id`)
+					   ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;""".format(databaseName))
+		db.commit()
+		print("Database '{}' created!".format(databaseName))
+	except Exception error:
+		print("ERROR: Database '{}' could not be created: {}".format(databaseName, str(error)))
+		db.rollback()
+
 
 def add(mutations, killed, survived, no_coverage, timed_out, xmlBuildOutput):
 	try:
