@@ -4,6 +4,9 @@ import web
 from urllib.request import Request, urlopen
 from xml.dom import minidom
 
+import MySQLdb
+import datetime, time
+
 titleString = "Pitest Statistics Extractor"
 versionString = "v0.01"
 
@@ -37,6 +40,20 @@ def extractPitestStatistics(xmlString):
             timed_out = timed_out + 1
 
     return mutations, killed, survived, no_coverage, timed_out
+
+def createBuildResultEntry(mutations, killed, survived, no_coverage, timed_out):
+    database = MySQLdb.connect(host="localhost", user="username", passwd="password", db="ci")
+    try:
+        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        insertCommand = "INSERT INTO `ci`.`build_result` (time, mutations, killed, survived, no_coverage, timed_out, output) VALUES ('{0}',{1},{2},{3},{4},{5},{6});"
+        cur.execute(insertCommand.format(time, mutations, killed, survived, no_coverage, timed_out, xmlBuildOutput))
+        db.commit()
+        print ("Build information enterred at {}".format(time))
+    except Exception as error:
+        print ("Build information failed to save: {}".format(str(error)))
+        db.rollback() 
+    return
+
 
 mutations, killed, survived, no_coverage, timed_out = extractPitestStatistics(mutationsFile)
 print ("RESULTS (" + str(getPercentage(mutations, killed)) + "%):")
