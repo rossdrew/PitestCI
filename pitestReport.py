@@ -43,16 +43,19 @@ def extractPitestStatistics(xmlString):
 
 def createBuildResultEntry(mutations, killed, survived, no_coverage, timed_out):
     database = MySQLdb.connect(host="localhost", user="username", passwd="password", db="ci")
+    cur = db.cursor()
     try:
         time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         insertCommand = "INSERT INTO `ci`.`build_result` (time, mutations, killed, survived, no_coverage, timed_out, output) VALUES ('{0}',{1},{2},{3},{4},{5},{6});"
         cur.execute(insertCommand.format(time, mutations, killed, survived, no_coverage, timed_out, xmlBuildOutput))
         db.commit()
         print ("Build information enterred at {}".format(time))
+        return true
     except Exception as error:
         print ("Build information failed to save: {}".format(str(error)))
         db.rollback() 
-    return
+    db.close()
+    return false
 
 
 mutations, killed, survived, no_coverage, timed_out = extractPitestStatistics(mutationsFile)
