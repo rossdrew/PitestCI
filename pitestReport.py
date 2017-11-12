@@ -147,6 +147,9 @@ class report:
         statsFile.write(statsEntry)
         statsFile.close()
 
+        #write to database
+        createBuildResultEntry(mutations, killed, survived, no_coverage, timed_out)
+
         #return stats
         web.header('x-pitest-mutations', mutations)
         web.header('x-pitest-mutations-killed', killed)
