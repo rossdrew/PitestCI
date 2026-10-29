@@ -1,0 +1,42 @@
+name: Bug report
+description: The Action failed, or the badge, summary or report is wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead (the badge, the job summary, an error).
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Your workflow
+      description: The job that runs Pitest and the Action.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: The Action's log
+      description: The output of the Pitest Badge step.
+      render: text
+  - type: input
+    id: link
+    attributes:
+      label: Link to the run
+      description: If the repository is public.
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build tool
+      options: [Gradle, Maven, Other]
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: The Action (e.g. v1.1.0), and Pitest if you know it.

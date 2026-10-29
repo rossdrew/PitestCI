@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Pitest itself
+    url: https://github.com/hcoles/pitest/issues
+    about: Problems with mutation testing, mutators or Pitest's own report belong with Pitest.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+No change to what the Action does.
+
+- The README, which is also the Marketplace page, shows what you get (live badges, an example job summary, the report), compares Pitest Badge with the alternatives, and leads with the two-line setup.
+- The description mentions the report too.
+- Issue templates for bugs and feature requests.
+
 ## 1.1.0
 
 Fixed:
