@@ -1,8 +1,16 @@
 # Pitest Badge
 
+[![Test](https://github.com/rossdrew/PitestCI/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/rossdrew/PitestCI/actions/workflows/test.yml)
+
 A [Pitest](https://pitest.org) mutation score badge for your README, hosted in your own repository. No account, service or secret: one step after Pitest in your GitHub Actions workflow.
 
-![mutation coverage: 75%](https://img.shields.io/badge/mutation%20coverage-75%25-yellow)
+[![self-test](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/rossdrew/PitestCI/self-test-badges/pitest.json)](https://github.com/rossdrew/PitestCI/tree/self-test-badges)
+
+That one is live: this repository's own tests publish it from a deliberately half-tested [sample](tests/projects) on every push to `main`, along with [its report](https://github.com/rossdrew/PitestCI/tree/self-test-pages/pitest).
+
+- Gradle or Maven, single or multi-module: it reads Pitest's `mutations.xml`.
+- The score in every run's job summary, with a table per package, pull requests included.
+- Optionally Pitest's HTML report on GitHub Pages.
 
 ## Usage
 
@@ -67,6 +75,10 @@ pushes Pitest's HTML report to `gh-pages` under `pitest/` (plus a copy of the ba
 Outputs: `score`, `detected`, `total`, `color`, `badge-file`, `badge-url`.
 
 The score is the share of mutants Pitest marks detected (killed, timed out, crashing the JVM, …), the same figure as its own report.
+
+## Versions
+
+`@v1` follows the latest 1.x release; pin `@v1.0.0` (or a commit) to stay put. See the [changelog](CHANGELOG.md).
 
 ## Notes
 

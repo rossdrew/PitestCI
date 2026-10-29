@@ -1,0 +1,22 @@
+name: Release
+
+# Moves the major version tag (v1) to each new release, so `@v1` users get it
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  major-tag:
+    if: startsWith(github.event.release.tag_name, 'v') && !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          major="${TAG%%.*}"
+          git tag -f "$major" "$TAG"
+          git push -f origin "refs/tags/$major"
+        env:
+          TAG: ${{ github.event.release.tag_name }}
