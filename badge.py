@@ -175,7 +175,7 @@ def main(env=os.environ):
             f.write(summary(s, label) + "\n")
 
     if get("publish", "false").lower() != "true":
-        print("Not publishing (publish is false: by default only pushes to the default branch publish).")
+        print("Not publishing: by default only a push to the default branch does (set `publish` to override).")
         return
     remote = env.get("PITEST_BADGE_REMOTE") or \
         f"{server.replace('://', '://x-access-token:' + get('token') + '@')}/{repository}.git"
