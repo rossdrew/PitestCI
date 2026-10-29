@@ -1,0 +1,16 @@
+name: Feature request
+description: Something the Action could do for you
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you're trying to do
+      description: The situation, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: An input, an output, a different badge, ... if you have an idea.

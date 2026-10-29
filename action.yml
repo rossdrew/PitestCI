@@ -1,5 +1,5 @@
 name: Pitest Badge
-description: A mutation score badge for Pitest, hosted in your own repository. No account, service or secret needed.
+description: A Pitest mutation coverage badge and HTML report, hosted in your own repository. No account, service or secret needed.
 author: Ross Drew
 
 branding:

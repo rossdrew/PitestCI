@@ -2,15 +2,52 @@
 
 [![Test](https://github.com/rossdrew/PitestCI/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/rossdrew/PitestCI/actions/workflows/test.yml)
 
-A [Pitest](https://pitest.org) mutation score badge for your README, hosted in your own repository. No account, service or secret: one step after Pitest in your GitHub Actions workflow.
+A [Pitest](https://pitest.org) mutation coverage badge and HTML report, hosted in your own repository. No account, service or secret: one step after Pitest in your GitHub Actions workflow.
+
+```yaml
+      - run: ./gradlew pitest        # or Maven
+      - uses: rossdrew/PitestCI@v1
+```
+
+## What you get
+
+**A badge** for your README, updated on every push to your default branch:
 
 [![self-test](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/rossdrew/PitestCI/self-test-badges/pitest.json)](https://github.com/rossdrew/PitestCI/tree/self-test-badges)
+[![mutation coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/rossdrew/roundabout/badges/pitest.json)](https://github.com/rossdrew/roundabout)
+[![mutation coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/rossdrew/EmuRoxLab/badges/pitest.json)](https://github.com/rossdrew/EmuRoxLab)
 
-That one is live: this repository's own tests publish it from a deliberately half-tested [sample](tests/projects) on every push to `main`.
+All three are live. The first comes from this repository's own tests, run on a deliberately half-tested [sample](tests/projects); the others are from [Roundabout](https://github.com/rossdrew/roundabout) and [EmuRox](https://github.com/rossdrew/EmuRoxLab).
 
-- Gradle or Maven, single or multi-module: it reads Pitest's `mutations.xml`.
-- The score in every run's job summary, with a table per package, pull requests included.
-- Optionally Pitest's HTML report on GitHub Pages.
+**The score in every run's job summary**, pull requests included, with a table per package. For example, Roundabout's:
+
+> ### Mutation coverage: 75%
+>
+> 780 of 1040 mutants detected.
+>
+> | Package | Detected | Score |
+> |---|---:|---:|
+> | `com.rox.roundabout` | 203/249 | 82% |
+> | `com.rox.roundabout.chart` | 86/126 | 68% |
+> | `com.rox.roundabout.debugger` | 106/165 | 64% |
+> | `com.rox.roundabout.memory` | 327/434 | 75% |
+> | `com.rox.roundabout.timing` | 32/40 | 80% |
+> | `com.rox.roundabout.window` | 26/26 | 100% |
+
+**Optionally, Pitest's HTML report on GitHub Pages**, like [Roundabout's](https://rossdrew.github.io/roundabout/pitest/).
+
+It works with Gradle or Maven, single or multi-module: it reads Pitest's `mutations.xml` and adds modules together. The score is the same figure as Pitest's own report.
+
+### Compared with
+
+| | Badge | Hosted for you | Account or secret |
+|---|---|---|---|
+| **Pitest Badge** | ✓ | ✓ in your repository | none |
+| [Stryker Dashboard](https://stryker-mutator.io/docs/General/dashboard/) via [pit-stryker-dashboard-reporter](https://github.com/mthmulders/pit-stryker-dashboard-reporter) | ✓ | ✓ on the dashboard | dashboard account and API key |
+| Writing the shields.io JSON yourself (a script or Gradle task) | ✓ | you set up Pages or a branch | none |
+| Actions that comment on PRs or annotate code ([1](https://github.com/marketplace/actions/gradle-pitest-with-summary-comment), [2](https://github.com/marketplace/actions/pitest-report)) | – | – | none |
+
+The PR-comment and annotation Actions pair well with this one: they explain individual mutants in review, while this tracks the overall score.
 
 ## Usage
 
