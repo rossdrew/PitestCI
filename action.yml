@@ -1,0 +1,85 @@
+name: Pitest Badge
+description: A mutation score badge for Pitest, hosted in your own repository. No account, service or secret needed.
+author: Ross Drew
+
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  reports:
+    description: >
+      Glob(s) for Pitest's mutations.xml, space-separated (e.g. build/reports/pitest/mutations.xml).
+      Empty finds every mutations.xml in the workspace; modules are added together.
+    default: ""
+  label:
+    description: The badge's left-hand text.
+    default: mutation coverage
+  thresholds:
+    description: Scores (%) at which the badge turns yellow, then green; below the first it is red.
+    default: "60,80"
+  publish:
+    description: Push the badge (and report) to the repository. By default only on a push to the default branch.
+    default: ${{ github.event_name == 'push' && github.ref_name == github.event.repository.default_branch }}
+  badge-branch:
+    description: Branch the badge is pushed to. It keeps only its latest commit; other files in it are kept.
+    default: badges
+  badge-file:
+    description: The badge's path in that branch (change it to keep several badges in one branch).
+    default: pitest.json
+  report:
+    description: Also publish Pitest's HTML report to the Pages branch (Pages set to deploy from that branch).
+    default: "false"
+  pages-branch:
+    description: Branch the report is pushed to; it also gets a copy of the badge at badge-file.
+    default: gh-pages
+  pages-path:
+    description: Folder for the report in the Pages branch (one subfolder per module when there are several).
+    default: pitest
+  output-dir:
+    description: Where the badge JSON is also written in the workspace.
+    default: pitest-badge
+  token:
+    description: Token used to push; needs contents write.
+    default: ${{ github.token }}
+
+outputs:
+  score:
+    description: Mutation score, 0-100.
+    value: ${{ steps.badge.outputs.score }}
+  detected:
+    description: Mutants detected by the tests.
+    value: ${{ steps.badge.outputs.detected }}
+  total:
+    description: All mutants.
+    value: ${{ steps.badge.outputs.total }}
+  color:
+    description: The badge colour (red, yellow or brightgreen).
+    value: ${{ steps.badge.outputs.color }}
+  badge-file:
+    description: Path of the badge JSON in the workspace.
+    value: ${{ steps.badge.outputs.badge-file }}
+  badge-url:
+    description: The shields.io image URL for the published badge, for a README.
+    value: ${{ steps.badge.outputs.badge-url }}
+
+runs:
+  using: composite
+  steps:
+    - id: badge
+      shell: bash
+      run: |
+        python=$(command -v python3 || command -v python)
+        "$python" "$GITHUB_ACTION_PATH/badge.py"
+      env:
+        INPUT_REPORTS: ${{ inputs.reports }}
+        INPUT_LABEL: ${{ inputs.label }}
+        INPUT_THRESHOLDS: ${{ inputs.thresholds }}
+        INPUT_PUBLISH: ${{ inputs.publish }}
+        INPUT_BADGE_BRANCH: ${{ inputs.badge-branch }}
+        INPUT_BADGE_FILE: ${{ inputs.badge-file }}
+        INPUT_REPORT: ${{ inputs.report }}
+        INPUT_PAGES_BRANCH: ${{ inputs.pages-branch }}
+        INPUT_PAGES_PATH: ${{ inputs.pages-path }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_TOKEN: ${{ inputs.token }}
