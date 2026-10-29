@@ -1,7 +1,8 @@
 name: Test
 
 # Unit tests, then the Action itself on a Gradle and a Maven sample. Pushes to main also publish
-# the Gradle sample's badge and report to the self-test branches and check what arrived.
+# the Gradle sample's badge to the self-test-badges branch, upload its report site for Pages (not
+# deployed here) and check what arrived.
 on:
   pull_request:
   push:
@@ -44,20 +45,20 @@ jobs:
           label: self-test
           badge-branch: self-test-badges
           report: true
-          pages-branch: self-test-pages
       - name: Check the score
         run: |
           test "${{ steps.badge.outputs.score }}" = 50
           test "${{ steps.badge.outputs.detected }}/${{ steps.badge.outputs.total }}" = 4/8
           test "${{ steps.badge.outputs.color }}" = red
           grep -q '"message": "50%"' "${{ steps.badge.outputs.badge-file }}"
+          test -f "${{ steps.badge.outputs.site-dir }}/pitest/index.html"
+          grep -q '"message": "50%"' "${{ steps.badge.outputs.site-dir }}/pitest.json"
       - name: Check what was published
         if: github.event_name == 'push'
         run: |
-          git fetch -q origin self-test-badges self-test-pages
+          git fetch -q origin self-test-badges
           git show origin/self-test-badges:pitest.json | grep -q '"message": "50%"'
           test "$(git rev-list --count origin/self-test-badges)" = 1
-          git cat-file -e origin/self-test-pages:pitest/index.html
           echo "Badge: ${{ steps.badge.outputs.badge-url }}"
 
   maven:

@@ -139,9 +139,9 @@ class PublishTest(unittest.TestCase):
         (old / "gone/index.html").write_text("old")
         new.mkdir()
         (new / "index.html").write_text("new")
-        badge.publish(str(self.remote), "gh-pages", {"pitest": old}, "first")
-        badge.publish(str(self.remote), "gh-pages", {"pitest": new}, "second")
-        clone = self.branch("gh-pages")
+        badge.publish(str(self.remote), "site", {"pitest": old}, "first")
+        badge.publish(str(self.remote), "site", {"pitest": new}, "second")
+        clone = self.branch("site")
         self.assertEqual(["index.html"], sorted(p.name for p in (clone / "pitest").iterdir()))
 
     def test_gives_up_with_a_permissions_hint(self):
@@ -181,13 +181,38 @@ class MainTest(unittest.TestCase):
         self.assertEqual("50%", json.loads((self.workspace / "pitest-badge/pitest.json").read_text())["message"])
         self.assertEqual([], self.branches())
 
-    def test_publishes_the_badge_and_optionally_the_report(self):
+    def outputs_dict(self):
+        return dict(line.split("=", 1) for line in self.outputs.read_text().splitlines())
+
+    def test_publishes_the_badge(self):
         self.run_main(publish="true", thresholds="40,90")
         self.assertEqual(["badges"], self.branches())
+        self.assertEqual("false", self.outputs_dict()["pages"])
+
+    def test_report_builds_a_pages_site_with_the_badge(self):
         self.run_main(publish="true", report="true", pages_path="mutants")
-        self.assertEqual(["badges", "gh-pages"], self.branches())
-        files = git("ls-tree", "-r", "--name-only", "gh-pages", cwd=self.remote).split()
-        self.assertEqual(["mutants/index.html", "mutants/mutations.xml", "pitest.json"], files)
+        site = self.workspace / "pitest-site"
+        self.assertEqual(["mutants/index.html", "mutants/mutations.xml", "pitest.json"],
+                         sorted(str(p.relative_to(site)) for p in site.rglob("*") if p.is_file()))
+        self.assertEqual(("pitest-site", "true"), (self.outputs_dict()["site-dir"], self.outputs_dict()["pages"]))
+        self.assertEqual(["badges"], self.branches(), "the report isn't pushed anywhere")
+
+    def test_a_report_without_publishing_builds_the_site_but_doesnt_upload_it(self):
+        self.run_main(report="true")
+        self.assertTrue((self.workspace / "pitest-site/pitest/index.html").exists())
+        self.assertEqual("false", self.outputs_dict()["pages"])
+
+    def test_report_without_html_warns_and_has_no_site(self):
+        (self.workspace / "build/reports/pitest/index.html").unlink()
+        self.run_main(publish="true", report="true")
+        self.assertEqual(("", "false"), (self.outputs_dict()["site-dir"], self.outputs_dict()["pages"]))
+
+    def test_modules_get_a_folder_each(self):
+        report(self.workspace / "other/build/reports/pitest/mutations.xml", ("q.B", True, "KILLED"))
+        (self.workspace / "other/build/reports/pitest/index.html").write_text("other")
+        self.run_main(report="true")
+        site = self.workspace / "pitest-site/pitest"
+        self.assertEqual(["build-reports-pitest", "other-build-reports-pitest"], sorted(p.name for p in site.iterdir()))
 
     def test_fails_clearly_without_a_report(self):
         empty = self.dir / "empty"

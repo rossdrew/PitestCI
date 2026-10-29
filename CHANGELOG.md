@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+Fixed:
+
+- `report: true` pushed the HTML report to `gh-pages`, but GitHub doesn't rebuild Pages for pushes made with the workflow's token, so the site never updated. The Action now assembles the site (report under `pitest/`, badge at the root) and uploads it for `actions/deploy-pages`; set Pages' source to **GitHub Actions** and add a deploy job (see the README). The `pages-branch` input is gone; `site-dir` and the `site-dir` output are new.
+
+Docs: how to keep the token that can push away from the build, by publishing from a job of its own.
+
 ## 1.0.0
 
 First release as a GitHub Action (the 2017 PythonAnywhere script it replaces is in the history).

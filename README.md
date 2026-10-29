@@ -6,7 +6,7 @@ A [Pitest](https://pitest.org) mutation score badge for your README, hosted in y
 
 [![self-test](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/rossdrew/PitestCI/self-test-badges/pitest.json)](https://github.com/rossdrew/PitestCI/tree/self-test-badges)
 
-That one is live: this repository's own tests publish it from a deliberately half-tested [sample](tests/projects) on every push to `main`, along with [its report](https://github.com/rossdrew/PitestCI/tree/self-test-pages/pitest).
+That one is live: this repository's own tests publish it from a deliberately half-tested [sample](tests/projects) on every push to `main`.
 
 - Gradle or Maven, single or multi-module: it reads Pitest's `mutations.xml`.
 - The score in every run's job summary, with a table per package, pull requests included.
@@ -14,7 +14,7 @@ That one is live: this repository's own tests publish it from a deliberately hal
 
 ## Usage
 
-Run Pitest with XML output (`outputFormats = listOf("XML", "HTML")` in Gradle, `<outputFormats>XML,HTML</outputFormats>` in Maven), then:
+Run Pitest with XML output (`outputFormats = listOf("XML", "HTML")` in Gradle, `<outputFormats>XML,HTML</outputFormats>` in Maven), then add the step:
 
 ```yaml
 on:
@@ -22,12 +22,11 @@ on:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: write   # to push the badge
-
 jobs:
   mutation:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to push the badge
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -46,15 +45,62 @@ On pushes to your default branch it commits the badge to a `badges` branch; on p
 
 The `badge-url` output gives the exact URL.
 
-### The HTML report too
+### Keeping the write token away from your build
+
+Above, the token that can push to your repository is in the same job as your build and every plugin and dependency it runs. To keep them apart, run Pitest without it and publish from a job that only downloads the report (the Action needs no checkout):
 
 ```yaml
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      # ... checkout, Java, ./gradlew pitest as above
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pitest
+          path: build/reports/pitest
+
+  badge:
+    if: github.event_name == 'push'
+    needs: mutation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pitest
+      - uses: rossdrew/PitestCI@v1
+```
+
+### The HTML report too
+
+With `report: true` it also puts Pitest's HTML report, under `pitest/`, and a copy of the badge into a GitHub Pages site and uploads it; a job of yours deploys it. Set Pages' source to **GitHub Actions** once in the repository's settings; the report is then at `https://<owner>.github.io/<repo>/pitest/`.
+
+```yaml
+  badge:
+    # ... as above
+    steps:
+      # ...
       - uses: rossdrew/PitestCI@v1
         with:
           report: true
+
+  pages:
+    needs: badge
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
 ```
 
-pushes Pitest's HTML report to `gh-pages` under `pitest/` (plus a copy of the badge at its root). Set Pages to **Deploy from a branch**, `gh-pages`, once in the repository's settings; the report is then at `https://<owner>.github.io/<repo>/pitest/`. Anything else in `gh-pages` is kept, but like `badges` the branch keeps only its latest commit.
+(The Action can't deploy for you: deploying needs the `github-pages` environment, which only a job can set. Pushing the report to a `gh-pages` branch instead doesn't work either: GitHub doesn't rebuild Pages for pushes made with the workflow's token.)
 
 ## Inputs
 
@@ -66,13 +112,13 @@ pushes Pitest's HTML report to `gh-pages` under `pitest/` (plus a copy of the ba
 | `publish` | on a push to the default branch | `true`/`false` to override. |
 | `badge-branch` | `badges` | Keeps only its latest commit; other files in it are kept. |
 | `badge-file` | `pitest.json` | Its path in that branch; use different ones for several badges. |
-| `report` | `false` | Also publish the HTML report. |
-| `pages-branch` | `gh-pages` | Where the report goes. |
-| `pages-path` | `pitest` | The report's folder; one subfolder per module when there are several. |
+| `report` | `false` | Also build a Pages site with the HTML report and, when publishing, upload it for `actions/deploy-pages`. |
+| `pages-path` | `pitest` | The report's folder in the site; one subfolder per module when there are several. |
+| `site-dir` | `pitest-site` | Where the site is assembled. |
 | `output-dir` | `pitest-badge` | The badge JSON is also written here, e.g. to upload as an artifact. |
 | `token` | `github.token` | Needs contents write. |
 
-Outputs: `score`, `detected`, `total`, `color`, `badge-file`, `badge-url`.
+Outputs: `score`, `detected`, `total`, `color`, `badge-file`, `badge-url`, `site-dir`.
 
 The score is the share of mutants Pitest marks detected (killed, timed out, crashing the JVM, …), the same figure as its own report.
 

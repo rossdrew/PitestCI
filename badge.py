@@ -1,6 +1,6 @@
 """Pitest mutation score badge: reads Pitest's mutations.xml, writes a shields.io endpoint badge,
-summarises the score in the job summary and publishes the badge (and optionally the HTML report)
-to branches of the repository.
+summarises the score in the job summary, commits the badge to a branch of the repository and
+optionally assembles a Pages site with the HTML report (action.yml uploads it for deploy-pages).
 
 Standard library only, so the Action needs no setup step. Inputs arrive as INPUT_* environment
 variables set by action.yml.
@@ -93,9 +93,22 @@ def git(*args, cwd, check=True):
     return subprocess.run(["git", *args], cwd=cwd, check=check, text=True, capture_output=True)
 
 
+def place(files, root):
+    """Copies files ({path under root: source file or folder}) into root; a folder replaces any already there."""
+    for target, source in files.items():
+        dest = Path(root, target)
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if Path(source).is_dir():
+            shutil.copytree(source, dest)
+        else:
+            shutil.copyfile(source, dest)
+
+
 def publish(remote, branch, files, message, attempts=3):
-    """Writes files ({path in branch: source path, or None for a directory to remove}) onto branch as
-    its only commit, keeping whatever else the branch holds; retries if another run pushed meanwhile."""
+    """Writes files ({path in branch: source path}) onto branch as its only commit, keeping whatever
+    else the branch holds; retries if another run pushed meanwhile."""
     for attempt in range(attempts):
         with tempfile.TemporaryDirectory() as work:
             git("init", "-q", cwd=work)
@@ -105,15 +118,7 @@ def publish(remote, branch, files, message, attempts=3):
                 git("checkout", "-q", "FETCH_HEAD", cwd=work)
                 lease = git("rev-parse", "FETCH_HEAD", cwd=work).stdout.strip()
             git("checkout", "-q", "--orphan", "pitest-badge-publish", cwd=work)
-            for target, source in files.items():
-                dest = Path(work, target)
-                if dest.is_dir():
-                    shutil.rmtree(dest)
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                if Path(source).is_dir():
-                    shutil.copytree(source, dest)
-                else:
-                    shutil.copyfile(source, dest)
+            place(files, work)
             git("add", "-A", cwd=work)
             git("-c", f"user.name={BOT[0]}", "-c", f"user.email={BOT[1]}",
                 "commit", "-q", "--allow-empty", "-m", message, cwd=work)
@@ -136,6 +141,27 @@ def thresholds_input(text):
 def report_dirs(reports):
     """The HTML report folders next to each mutations.xml that has one."""
     return [r.parent for r in reports if (r.parent / "index.html").exists()]
+
+
+def build_site(site, reports, badge_file, badge_path, pages_path):
+    """A Pages site: the badge at badge_path and the HTML report under pages_path (a subfolder per
+    module when there are several). Returns False when there is no HTML report."""
+    dirs = report_dirs(reports)
+    if not dirs:
+        return False
+    if site.exists():
+        shutil.rmtree(site)
+    site.mkdir(parents=True)
+    files = {badge_path: badge_file}
+    if len(dirs) == 1:
+        files[pages_path] = dirs[0]
+    else:
+        # one folder per module, named after its path
+        for d in dirs:
+            name = str(d.relative_to(Path.cwd()) if d.is_absolute() else d).replace(os.sep, "-")
+            files[f"{pages_path}/{name}"] = d
+    place(files, site)
+    return True
 
 
 def main(env=os.environ):
@@ -162,11 +188,19 @@ def main(env=os.environ):
     (out / "pitest.json").write_text(json.dumps(badge(s, label, thresholds)) + "\n")
     print(f"{label}: {s.percent}% ({s.detected}/{s.total}) from {', '.join(map(str, reports))}")
 
+    publishing = get("publish", "false").lower() == "true"
+    site = Path(get("site-dir", "pitest-site"))
+    has_site = get("report", "false").lower() == "true" and \
+        build_site(site, reports, out / "pitest.json", badge_path, get("pages-path", "pitest").strip("/"))
+    if get("report", "false").lower() == "true" and not has_site:
+        print("::warning::No HTML report next to mutations.xml; add HTML to Pitest's output formats.")
+
     server = env.get("GITHUB_SERVER_URL", "https://github.com")
     repository = env.get("GITHUB_REPOSITORY", "")
     url = badge_url(server, repository, badge_branch, badge_path)
     outputs = {"score": s.percent, "detected": s.detected, "total": s.total,
-               "color": colour(s.percent, thresholds), "badge-file": out / "pitest.json", "badge-url": url}
+               "color": colour(s.percent, thresholds), "badge-file": out / "pitest.json", "badge-url": url,
+               "site-dir": site if has_site else "", "pages": str(publishing and has_site).lower()}
     if "GITHUB_OUTPUT" in env:
         with open(env["GITHUB_OUTPUT"], "a") as f:
             f.writelines(f"{k}={v}\n" for k, v in outputs.items())
@@ -174,32 +208,17 @@ def main(env=os.environ):
         with open(env["GITHUB_STEP_SUMMARY"], "a") as f:
             f.write(summary(s, label) + "\n")
 
-    if get("publish", "false").lower() != "true":
+    if not publishing:
         print("Not publishing: by default only a push to the default branch does (set `publish` to override).")
         return
-    remote = env.get("PITEST_BADGE_REMOTE") or \
-        f"{server.replace('://', '://x-access-token:' + get('token') + '@')}/{repository}.git"
-    message = f"{label}: {s.percent}% ({env.get('GITHUB_SHA', '')[:7] or 'local'})"
     if badge_branch:
+        remote = env.get("PITEST_BADGE_REMOTE") or \
+            f"{server.replace('://', '://x-access-token:' + get('token') + '@')}/{repository}.git"
+        message = f"{label}: {s.percent}% ({env.get('GITHUB_SHA', '')[:7] or 'local'})"
         publish(remote, badge_branch, {badge_path: out / "pitest.json"}, message)
         print(f"Badge: {url}")
-
-    if get("report", "false").lower() == "true":
-        dirs = report_dirs(reports)
-        if not dirs:
-            print("::warning::No HTML report next to mutations.xml; add HTML to Pitest's output formats.")
-            return
-        pages_path = get("pages-path", "pitest").strip("/")
-        files = {badge_path: out / "pitest.json"}
-        if len(dirs) == 1:
-            files[pages_path] = dirs[0]
-        else:
-            # one folder per module, named after its path
-            for d in dirs:
-                name = str(d.relative_to(Path.cwd()) if d.is_absolute() else d).replace(os.sep, "-")
-                files[f"{pages_path}/{name}"] = d
-        publish(remote, get("pages-branch", "gh-pages"), files, message)
-
+    if has_site:
+        print(f"Report: {site}, uploaded for Pages; deploy it with actions/deploy-pages.")
 
 if __name__ == "__main__":
     sys.exit(main())
