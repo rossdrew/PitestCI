@@ -28,14 +28,16 @@ inputs:
     description: The badge's path in that branch (change it to keep several badges in one branch).
     default: pitest.json
   report:
-    description: Also publish Pitest's HTML report to the Pages branch (Pages set to deploy from that branch).
+    description: >
+      Also build a Pages site with Pitest's HTML report (and a copy of the badge) and, when publishing,
+      upload it for actions/deploy-pages in a later job.
     default: "false"
-  pages-branch:
-    description: Branch the report is pushed to; it also gets a copy of the badge at badge-file.
-    default: gh-pages
   pages-path:
-    description: Folder for the report in the Pages branch (one subfolder per module when there are several).
+    description: Folder for the report in the site (one subfolder per module when there are several).
     default: pitest
+  site-dir:
+    description: Where the Pages site is assembled in the workspace.
+    default: pitest-site
   output-dir:
     description: Where the badge JSON is also written in the workspace.
     default: pitest-badge
@@ -62,6 +64,9 @@ outputs:
   badge-url:
     description: The shields.io image URL for the published badge, for a README.
     value: ${{ steps.badge.outputs.badge-url }}
+  site-dir:
+    description: The Pages site's folder, when report is on and there is an HTML report.
+    value: ${{ steps.badge.outputs.site-dir }}
 
 runs:
   using: composite
@@ -79,7 +84,11 @@ runs:
         INPUT_BADGE_BRANCH: ${{ inputs.badge-branch }}
         INPUT_BADGE_FILE: ${{ inputs.badge-file }}
         INPUT_REPORT: ${{ inputs.report }}
-        INPUT_PAGES_BRANCH: ${{ inputs.pages-branch }}
         INPUT_PAGES_PATH: ${{ inputs.pages-path }}
+        INPUT_SITE_DIR: ${{ inputs.site-dir }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_TOKEN: ${{ inputs.token }}
+    - if: steps.badge.outputs.pages == 'true'
+      uses: actions/upload-pages-artifact@v4
+      with:
+        path: ${{ steps.badge.outputs.site-dir }}
