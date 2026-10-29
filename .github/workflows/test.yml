@@ -1,0 +1,80 @@
+name: Test
+
+# Unit tests, then the Action itself on a Gradle and a Maven sample. Pushes to main also publish
+# the Gradle sample's badge and report to the self-test branches and check what arrived.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.x"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+
+  gradle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # the self-test branches, on main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.4.0"
+      - run: gradle -p tests/projects/gradle pitest
+      - id: badge
+        uses: ./
+        with:
+          reports: tests/projects/gradle/build/reports/pitest/mutations.xml
+          label: self-test
+          badge-branch: self-test-badges
+          report: true
+          pages-branch: self-test-pages
+      - name: Check the score
+        run: |
+          test "${{ steps.badge.outputs.score }}" = 50
+          test "${{ steps.badge.outputs.detected }}/${{ steps.badge.outputs.total }}" = 4/8
+          test "${{ steps.badge.outputs.color }}" = red
+          grep -q '"message": "50%"' "${{ steps.badge.outputs.badge-file }}"
+      - name: Check what was published
+        if: github.event_name == 'push'
+        run: |
+          git fetch -q origin self-test-badges self-test-pages
+          git show origin/self-test-badges:pitest.json | grep -q '"message": "50%"'
+          test "$(git rev-list --count origin/self-test-badges)" = 1
+          git cat-file -e origin/self-test-pages:pitest/index.html
+          echo "Badge: ${{ steps.badge.outputs.badge-url }}"
+
+  maven:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - run: mvn -B -f tests/projects/maven/pom.xml test-compile org.pitest:pitest-maven:mutationCoverage
+      - id: badge
+        uses: ./
+        with:
+          publish: false
+      - name: Check the score
+        run: |
+          test "${{ steps.badge.outputs.score }}" = 50
+          test "${{ steps.badge.outputs.detected }}/${{ steps.badge.outputs.total }}" = 4/8
